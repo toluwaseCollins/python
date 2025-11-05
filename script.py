@@ -1,20 +1,51 @@
 import requests
 import json
 import csv
+import os
+
+def read_token_from_file(file_name="token.txt"):
+    """
+    Reads the Bearer token from a specified text file.
+    
+    Returns:
+        str: The token content, stripped of whitespace.
+        
+    Raises:
+        FileNotFoundError: If the token file is not found.
+    """
+    try:
+        # 'r' mode for reading
+        with open(file_name, 'r') as f:
+            # Read the first line and strip any leading/trailing whitespace (like newlines)
+            token = f.read().strip()
+        return token
+    except FileNotFoundError:
+        # Custom error message for the user
+        print(f"ERROR: Token file '{file_name}' not found in the current directory.")
+        raise
+    except Exception as e:
+        print(f"An unexpected error occurred while reading the token file: {e}")
+        raise
 
 def fetch_and_save_transactions():
     """
     Fetches transaction data from the Watchtower API and saves relevant fields to a CSV file.
     """
-    url = "https://watchtower-service.kudi.ai/data-hub/transactions/beta"
+    
+    # 1. Read the Bearer token from the file
+    try:
+        bearer_token = read_token_from_file()
+    except FileNotFoundError:
+        # Stop execution if the file is missing
+        return
 
-    # The long authorization token is stored in a separate variable for clarity
-    bearer_token = "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJKNGRPRDF2Nlo5R1VYejRGdjRxRW1tYlVhWnRwMnNfUGVKY3lSQ2tEaXpFIn0.eyJleHAiOjE3NjIzNTY3MjUsImlhdCI6MTc2MjM1MzEyNSwiYXV0aF90aW1lIjoxNzYyMzM4ODM3LCJqdGkiOiJlOTA3Y2FmNy04YzFhLTQ3NGYtYWNjNi02ZjljYTJjNDA1OTkiLCJpc3MiOiJodHRwczovL2tleWNsb2FrLmt1ZGkuYWkvYXV0aC9yZWFsbXMvTm9tYmEiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMGJjZDBmMzAtNWYwZi00MGU3LWE0ZDItZjg2ODkxZWUzMmRkIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoid2F0Y2h0b3dlci5rdWRpLmFpIiwibm9uY2UiOiI4OTFiNzQwNS1mYzU2LTQxN2YtOTA0OC1kNDZkMDYxZGQ5OGUiLCJzZXNzaW9uX3N0YXRlIjoiN2E1YzZkM2YtYmJkYy00ZTkxLWIzZTUtMTk4MThiMzRkNzA1IiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyJodHRwczovL3dhdGNodG93ZXItc2VydmljZS1kcmMubm9tYmEuY2QiLCJodHRwczovL3dhdGNodG93ZXItc2VydmljZS5ub21iYS5jZCIsImh0dHBzOi8vd2F0Y2h0b3dlci5ub21iYS5jZCIsImh0dHBzOi8vd2F0Y2h0b3dlci51c2Vub21iYS5jb20iLCJodHRwczovL3dhdGNodG93ZXItc2VydmljZS5rdWRpLmFpIiwiaHR0cHM6Ly93YXRjaHRvd2VyLmt1ZGkuYWkiLCJodHRwczovL3dhdGNodG93ZXItc2VydmljZS51c2Vub21iYS5jb20iLCJodHRwczovL3dhdGNodG93ZXItZHJjLm5vbWJhLmNkIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IlRvbHV3YWxhc2UgQ29sbGlucyIsInByZWZlcnJlZF91c2VybmFtZSI6InRvbHV3YXNlLmNvbGxpbnNAbm9tYmEuY29tIiwiZ2l2ZW5fbmFtZSI6IlRvbHV3YWxhc2UiLCJmYW1pbHlfbmFtZSI6IkNvbGxpbnMiLCJlbWFpbCI6InRvbHV3YXNlLmNvbGxpbnNAbm9tYmEuY29tIn0.fDPdZgRpWiJpf7g8cI5zUGA1SJYKruMwNy7c-lOHuhzyo7MdFoQUy_Zmj2Rqjspxq7_NtiQw0UIX4XwWWpZ4kkHHNaCGAcJu5HJwKW0mIxDlcCw8JiL-PgFD67RezQNnHO8pu-p9DPSwWQlkmW4XK1fj6LIGqLMPYE0zybRMzXBbKJSjOfXIMCoeSQEeEK6bW7k6kqK46MKUQEn_mM_VnWT8C3r1mH6g1gGCo-m3hbaFO-XR9kXcJ0b8JueoRCYUlPoxvIJ0SgarSCZi2jzYKVW7JMqqt2g3ZVE3S133lw8qioAJ7KPH6FoKiYadnrT6ExzRZ1DMO3mcFnZkO-X8Kw"
+    url = "https://watchtower-service.kudi.ai/data-hub/transactions/beta"
 
     headers = {
         "accept": "application/json, text/plain, */*",
         "accept-language": "en-US,en;q=0.9",
-        "authorization": f"Bearer {bearer_token}",
+        # 2. Use the token read from the file
+        "authorization": f"{bearer_token}", 
         "cache-control": "no-cache",
         "content-type": "application/json",
         "origin": "https://watchtower.kudi.ai",
@@ -69,12 +100,21 @@ def fetch_and_save_transactions():
             return
 
         # Define CSV file details
+        output_dir = "output"
         csv_file_name = "transactions.csv"
         csv_headers = ["_id", "paymentVendorReference"]
         
+        # 1. Create the full file path: "output/transactions.csv"
+        full_path = os.path.join(output_dir, csv_file_name)
+        
+        # 2. Create the output directory if it doesn't exist
+        if not os.path.exists(output_dir):
+            # os.makedirs creates the directory and any necessary parent directories
+            os.makedirs(output_dir)
+            print(f"Created directory: {output_dir}")
         print(f"Found {len(transaction_list)} transactions. Writing to {csv_file_name}...")
         
-        with open(csv_file_name, mode='w', newline='', encoding='utf-8') as file:
+        with open(full_path, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             
             # Write the header row
